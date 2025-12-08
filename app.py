@@ -1,6 +1,6 @@
 """
 AI Murder Mystery: The Blackwood Mansion
-Streamlit Web UI
+Streamlit Web UI with Dark Noir Theme
 """
 
 import streamlit as st
@@ -23,46 +23,217 @@ st.set_page_config(
     page_title="AI Murder Mystery",
     page_icon="🔍",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# Custom CSS
+# Dark Noir Theme CSS
 st.markdown("""
 <style>
+    /* Import typewriter font */
+    @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap');
+
+    /* Global dark theme */
+    .stApp {
+        background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0d0d0d 100%);
+    }
+
+    /* Main header - blood red */
     .main-header {
         text-align: center;
         color: #8B0000;
-        font-family: 'Georgia', serif;
+        font-family: 'Special Elite', cursive;
+        text-shadow: 2px 2px 4px #000000;
+        letter-spacing: 3px;
     }
-    .suspect-card {
-        background-color: #1a1a2e;
-        padding: 15px;
-        border-radius: 10px;
-        margin: 10px 0;
+
+    .sub-header {
+        text-align: center;
+        color: #666666;
+        font-family: 'Courier Prime', monospace;
+        font-style: italic;
     }
-    .chat-message {
-        padding: 10px;
-        border-radius: 10px;
-        margin: 5px 0;
-    }
-    .user-message {
-        background-color: #2d3748;
-        text-align: right;
-    }
-    .suspect-message {
-        background-color: #1a365d;
-    }
+
+    /* Case file styling */
     .case-file {
-        background-color: #2d2d2d;
-        padding: 20px;
-        border-radius: 10px;
+        background: linear-gradient(145deg, #1a1a1a, #2d2d2d);
+        padding: 25px;
+        border-radius: 5px;
         border-left: 4px solid #8B0000;
+        border-top: 1px solid #333;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        font-family: 'Courier Prime', monospace;
     }
+
+    .case-file h3 {
+        color: #8B0000;
+        font-family: 'Special Elite', cursive;
+        letter-spacing: 2px;
+    }
+
+    /* Suspect cards */
+    .suspect-card {
+        background: linear-gradient(145deg, #1a1a1a, #252525);
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border: 1px solid #333;
+        transition: all 0.3s ease;
+    }
+
+    .suspect-card:hover {
+        border-color: #8B0000;
+        box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+    }
+
+    /* Chat messages */
+    .stChatMessage {
+        background-color: #1a1a1a !important;
+        border: 1px solid #333;
+        font-family: 'Courier Prime', monospace;
+    }
+
+    /* Typewriter text effect */
+    .typewriter-text {
+        font-family: 'Special Elite', cursive;
+        color: #c0c0c0;
+        line-height: 1.8;
+    }
+
+    /* Notes section */
+    .detective-notes {
+        background: linear-gradient(145deg, #2a2a1a, #1a1a0a);
+        padding: 20px;
+        border-radius: 5px;
+        border: 1px solid #4a4a2a;
+        font-family: 'Courier Prime', monospace;
+        min-height: 150px;
+    }
+
+    .notes-header {
+        color: #8B0000;
+        font-family: 'Special Elite', cursive;
+        border-bottom: 1px solid #4a4a2a;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+
+    /* Score display */
     .score-display {
-        font-size: 48px;
+        font-size: 64px;
         font-weight: bold;
         text-align: center;
+        color: #8B0000;
+        font-family: 'Special Elite', cursive;
+        text-shadow: 2px 2px 4px #000000;
+    }
+
+    /* Sidebar styling */
+    .css-1d391kg, [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0d0d0d, #1a1a1a);
+    }
+
+    .sidebar-header {
+        color: #8B0000;
+        font-family: 'Special Elite', cursive;
+        letter-spacing: 2px;
+        text-align: center;
+        padding: 10px;
+        border-bottom: 1px solid #333;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(145deg, #2d2d2d, #1a1a1a);
+        color: #c0c0c0;
+        border: 1px solid #444;
+        font-family: 'Courier Prime', monospace;
+        transition: all 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        border-color: #8B0000;
+        color: #8B0000;
+        box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+    }
+
+    /* Primary button (accusation) */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(145deg, #8B0000, #5a0000);
+        color: #ffffff;
+        border: none;
+    }
+
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(145deg, #a00000, #6a0000);
+        box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background-color: #1a1a1a;
+        color: #8B0000;
+        font-family: 'Special Elite', cursive;
+    }
+
+    /* Progress bar */
+    .stProgress > div > div {
+        background-color: #8B0000;
+    }
+
+    /* Warning/Info boxes */
+    .stWarning {
+        background-color: rgba(139, 0, 0, 0.2);
+        border-left-color: #8B0000;
+    }
+
+    /* Text inputs */
+    .stTextArea textarea, .stTextInput input {
+        background-color: #1a1a1a;
+        color: #c0c0c0;
+        border: 1px solid #333;
+        font-family: 'Courier Prime', monospace;
+    }
+
+    /* Rain effect overlay */
+    .rain-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cline x1='10' y1='0' x2='10' y2='100' stroke='%23ffffff08' stroke-width='1'/%3E%3Cline x1='30' y1='0' x2='30' y2='100' stroke='%23ffffff05' stroke-width='1'/%3E%3Cline x1='50' y1='0' x2='50' y2='100' stroke='%23ffffff08' stroke-width='1'/%3E%3Cline x1='70' y1='0' x2='70' y2='100' stroke='%23ffffff05' stroke-width='1'/%3E%3Cline x1='90' y1='0' x2='90' y2='100' stroke='%23ffffff08' stroke-width='1'/%3E%3C/svg%3E");
+        opacity: 0.3;
+        z-index: -1;
+    }
+
+    /* Fog effect at bottom */
+    .fog-overlay {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 150px;
+        background: linear-gradient(to top, rgba(10,10,10,0.8), transparent);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* Vignette effect */
+    .vignette {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%);
+        z-index: 0;
     }
 </style>
+
+<!-- Atmospheric overlays -->
+<div class="vignette"></div>
 """, unsafe_allow_html=True)
 
 
@@ -78,6 +249,12 @@ def init_session_state():
         st.session_state.game_over = False
     if "accusation_result" not in st.session_state:
         st.session_state.accusation_result = None
+    # Notes for each suspect
+    if "notes" not in st.session_state:
+        st.session_state.notes = {sid: "" for sid in SUSPECTS.keys()}
+    # General notes
+    if "general_notes" not in st.session_state:
+        st.session_state.general_notes = ""
 
 
 def reset_game():
@@ -87,6 +264,8 @@ def reset_game():
     st.session_state.current_suspect = "s1"
     st.session_state.game_over = False
     st.session_state.accusation_result = None
+    st.session_state.notes = {sid: "" for sid in SUSPECTS.keys()}
+    st.session_state.general_notes = ""
 
 
 def render_case_briefing():
@@ -95,32 +274,39 @@ def render_case_briefing():
 
     st.markdown("""
     <div class="case-file">
-        <h3>📁 CASE BRIEFING</h3>
+        <h3>📁 CLASSIFIED CASE FILE</h3>
+        <p style="color: #666; font-size: 12px;">BLACKWOOD MANSION HOMICIDE - FILE #1947</p>
     </div>
     """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(f"**Victim:** {v['name']}")
-        st.markdown(f"**Time of Death:** {v['time_of_death']}")
+        st.markdown(f"**VICTIM:** {v['name']}")
+        st.markdown(f"**TIME OF DEATH:** {v['time_of_death']}")
     with col2:
-        st.markdown(f"**Location:** {v['location']}")
-        st.markdown(f"**Cause:** {v['cause']}")
+        st.markdown(f"**LOCATION:** {v['location']}")
+        st.markdown(f"**CAUSE:** {v['cause']}")
 
     st.markdown("---")
-    st.markdown("*Interrogate the suspects to discover WHO committed the murder, with WHAT weapon, and WHY.*")
+    st.markdown("*Your mission: Interrogate the suspects. Discover WHO committed the murder, with WHAT weapon, and WHY.*")
 
 
 def render_suspect_selector():
     """Render suspect selection sidebar."""
-    st.sidebar.markdown("## 👥 Suspects")
+    st.sidebar.markdown('<div class="sidebar-header">👥 SUSPECTS</div>', unsafe_allow_html=True)
+    st.sidebar.markdown("")
 
     for sid, suspect in SUSPECTS.items():
         interviewed = sid in st.session_state.game.state.suspects_interviewed
-        status = "✅" if interviewed else "⬜"
+        turns = st.session_state.game.state.turns_per_suspect.get(sid, 0)
+
+        if interviewed:
+            status = f"🔍 ({turns} questions)"
+        else:
+            status = "⬜ Not questioned"
 
         if st.sidebar.button(
-            f"{status} {suspect.name}",
+            f"{suspect.name}\n{status}",
             key=f"suspect_{sid}",
             use_container_width=True,
             disabled=st.session_state.game_over
@@ -133,7 +319,7 @@ def render_suspect_selector():
     current = SUSPECTS[st.session_state.current_suspect]
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"**Currently interrogating:**")
-    st.sidebar.markdown(f"### {current.name}")
+    st.sidebar.markdown(f"### 🎭 {current.name}")
 
 
 def render_game_status():
@@ -141,26 +327,39 @@ def render_game_status():
     state = st.session_state.game.state
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("## 📊 Investigation Status")
+    st.sidebar.markdown('<div class="sidebar-header">📊 INVESTIGATION</div>', unsafe_allow_html=True)
 
     # Turn counter with progress bar
     progress = state.total_turns / state.max_turns
     st.sidebar.progress(progress)
-    st.sidebar.markdown(f"**Turns:** {state.total_turns} / {state.max_turns}")
+    remaining = state.max_turns - state.total_turns
+    st.sidebar.markdown(f"**Questions remaining:** {remaining}")
 
     # Suspects interviewed
-    st.sidebar.markdown(f"**Suspects interviewed:** {len(state.suspects_interviewed)} / 3")
+    st.sidebar.markdown(f"**Suspects questioned:** {len(state.suspects_interviewed)} / 3")
 
     # Warning if running low on turns
-    if state.total_turns >= state.max_turns - 5 and not st.session_state.game_over:
-        st.sidebar.warning(f"⚠️ Only {state.max_turns - state.total_turns} turns left!")
+    if remaining <= 5 and remaining > 0 and not st.session_state.game_over:
+        st.sidebar.error(f"⚠️ Only {remaining} questions left!")
+    elif remaining == 0 and not st.session_state.game_over:
+        st.sidebar.error("🚨 Time's up! Make your accusation!")
 
 
 def render_chat_interface():
     """Render the main chat interface."""
     current_suspect = SUSPECTS[st.session_state.current_suspect]
 
-    st.markdown(f"### 🗣️ Interrogating: {current_suspect.name}")
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, transparent, #1a1a1a, transparent); padding: 10px; text-align: center;">
+        <span style="font-family: 'Special Elite', cursive; font-size: 24px; color: #8B0000;">
+            🎭 INTERROGATION ROOM
+        </span>
+        <br>
+        <span style="font-family: 'Courier Prime', monospace; color: #666;">
+            Subject: {current_suspect.name}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Chat container
     chat_container = st.container(height=400)
@@ -169,20 +368,24 @@ def render_chat_interface():
         messages = st.session_state.messages[st.session_state.current_suspect]
 
         if not messages:
-            st.markdown(f"*{current_suspect.name} sits across from you, waiting for your questions...*")
+            st.markdown(f"""
+            <div class="typewriter-text" style="text-align: center; padding: 50px; color: #666;">
+                <em>*{current_suspect.name} sits across the table, the dim light casting shadows across their face...*</em>
+            </div>
+            """, unsafe_allow_html=True)
 
         for msg in messages:
             if msg["role"] == "user":
-                st.chat_message("user").markdown(msg["content"])
+                st.chat_message("user", avatar="🕵️").markdown(msg["content"])
             else:
-                st.chat_message("assistant", avatar="🎭").markdown(msg["content"])
+                st.chat_message("assistant", avatar="🎭").markdown(f'*{msg["content"]}*')
 
     # Input
     if not st.session_state.game_over:
         if st.session_state.game.state.total_turns >= st.session_state.game.state.max_turns:
-            st.warning("⏰ No turns remaining! Make your accusation now.")
+            st.error("🚨 No questions remaining! You must make your accusation now.")
         else:
-            user_input = st.chat_input(f"Ask {current_suspect.name} a question...")
+            user_input = st.chat_input(f"Interrogate {current_suspect.name}...")
 
             if user_input:
                 # Add user message
@@ -192,7 +395,7 @@ def render_chat_interface():
                 })
 
                 # Get response
-                with st.spinner(f"{current_suspect.name} is thinking..."):
+                with st.spinner(f"*{current_suspect.name} considers your question...*"):
                     response = st.session_state.game.interrogate(user_input)
 
                 # Add suspect response
@@ -204,41 +407,114 @@ def render_chat_interface():
                 st.rerun()
 
 
+def render_notes_section():
+    """Render the detective's notes section."""
+    st.markdown("---")
+    st.markdown("""
+    <div class="notes-header">
+        📝 DETECTIVE'S NOTES
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Tabs for different note sections
+    tab1, tab2, tab3, tab4 = st.tabs([
+        f"📋 General Notes",
+        f"🎭 {SUSPECTS['s1'].name}",
+        f"🎭 {SUSPECTS['s2'].name}",
+        f"🎭 {SUSPECTS['s3'].name}"
+    ])
+
+    with tab1:
+        st.session_state.general_notes = st.text_area(
+            "General observations and theories:",
+            value=st.session_state.general_notes,
+            height=150,
+            placeholder="Write your theories here...\n\nExample:\n- The timeline doesn't add up\n- Someone is lying about their alibi\n- Check the library for clues",
+            key="general_notes_input"
+        )
+
+    with tab2:
+        st.session_state.notes["s1"] = st.text_area(
+            f"Notes on {SUSPECTS['s1'].name}:",
+            value=st.session_state.notes["s1"],
+            height=150,
+            placeholder=f"What did {SUSPECTS['s1'].name} reveal?\nAny suspicious behavior?",
+            key="notes_s1"
+        )
+
+    with tab3:
+        st.session_state.notes["s2"] = st.text_area(
+            f"Notes on {SUSPECTS['s2'].name}:",
+            value=st.session_state.notes["s2"],
+            height=150,
+            placeholder=f"What did {SUSPECTS['s2'].name} reveal?\nAny suspicious behavior?",
+            key="notes_s2"
+        )
+
+    with tab4:
+        st.session_state.notes["s3"] = st.text_area(
+            f"Notes on {SUSPECTS['s3'].name}:",
+            value=st.session_state.notes["s3"],
+            height=150,
+            placeholder=f"What did {SUSPECTS['s3'].name} reveal?\nAny suspicious behavior?",
+            key="notes_s3"
+        )
+
+
 def render_accusation_form():
     """Render the accusation form."""
     st.markdown("---")
-    st.markdown("## ⚖️ Make Your Accusation")
+    st.markdown("""
+    <div style="text-align: center; padding: 20px;">
+        <span style="font-family: 'Special Elite', cursive; font-size: 28px; color: #8B0000;">
+            ⚖️ MAKE YOUR ACCUSATION
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.session_state.game_over:
-        st.info("Game over! Click 'New Game' to play again.")
+        st.info("The case is closed. Click 'New Case' to investigate another mystery.")
         return
 
-    with st.expander("Ready to accuse? Click here", expanded=False):
+    with st.expander("🔓 Ready to name the killer? Click here...", expanded=False):
+        st.markdown("""
+        <p style="font-family: 'Courier Prime', monospace; color: #888; text-align: center;">
+            Choose wisely, detective. You only get one chance.
+        </p>
+        """, unsafe_allow_html=True)
+
         col1, col2, col3 = st.columns(3)
 
         with col1:
+            st.markdown("**THE KILLER**")
             accused = st.selectbox(
-                "Who is the killer?",
+                "Who committed the murder?",
                 options=list(SUSPECTS.keys()),
-                format_func=lambda x: SUSPECTS[x].name
+                format_func=lambda x: SUSPECTS[x].name,
+                label_visibility="collapsed"
             )
 
         with col2:
+            st.markdown("**THE WEAPON**")
             weapon = st.selectbox(
-                "Murder weapon?",
-                options=VALID_WEAPONS
+                "What was the murder weapon?",
+                options=VALID_WEAPONS,
+                label_visibility="collapsed"
             )
 
         with col3:
+            st.markdown("**THE MOTIVE**")
             motive = st.selectbox(
-                "Motive?",
-                options=VALID_MOTIVES
+                "Why did they do it?",
+                options=VALID_MOTIVES,
+                label_visibility="collapsed"
             )
 
-        st.warning("⚠️ This is your FINAL accusation. Choose carefully!")
+        st.markdown("")
+        st.warning("⚠️ This is your FINAL accusation. There is no going back.")
 
-        if st.button("🔨 Submit Accusation", type="primary", use_container_width=True):
-            with st.spinner("The judge is reviewing your accusation..."):
+        if st.button("🔨 I ACCUSE...", type="primary", use_container_width=True):
+            with st.spinner("*The room falls silent as the evidence is reviewed...*"):
                 won, score, eval_text = st.session_state.game.make_accusation(accused, weapon, motive)
 
             st.session_state.game_over = True
@@ -261,10 +537,29 @@ def render_game_result():
 
     if result["won"]:
         st.balloons()
-        st.success("# 🎉 CASE SOLVED!")
+        st.markdown("""
+        <div style="text-align: center; padding: 30px;">
+            <span style="font-family: 'Special Elite', cursive; font-size: 48px; color: #228B22;">
+                🎉 CASE SOLVED
+            </span>
+            <br><br>
+            <span style="font-family: 'Courier Prime', monospace; color: #666;">
+                Justice has been served. The killer is behind bars.
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.error("# ❌ CASE UNSOLVED")
-        st.markdown("*The killer remains free...*")
+        st.markdown("""
+        <div style="text-align: center; padding: 30px;">
+            <span style="font-family: 'Special Elite', cursive; font-size: 48px; color: #8B0000;">
+                ❌ CASE UNSOLVED
+            </span>
+            <br><br>
+            <span style="font-family: 'Courier Prime', monospace; color: #666;">
+                The killer walks free... for now.
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Score display
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -273,14 +568,18 @@ def render_game_result():
         <div class="score-display">
             {result['score']}/100
         </div>
+        <p style="text-align: center; font-family: 'Courier Prime', monospace; color: #666;">
+            DETECTIVE RATING
+        </p>
         """, unsafe_allow_html=True)
 
     # Detailed evaluation
-    with st.expander("📋 Case Resolution Details", expanded=True):
+    with st.expander("📋 Case Resolution Report", expanded=True):
         st.markdown(result["eval_text"])
 
     # Play again button
-    if st.button("🔄 New Game", type="primary", use_container_width=True):
+    st.markdown("")
+    if st.button("🔄 NEW CASE", type="primary", use_container_width=True):
         reset_game()
         st.rerun()
 
@@ -312,8 +611,13 @@ def main():
     init_session_state()
 
     # Header
-    st.markdown("<h1 class='main-header'>🔍 AI Murder Mystery</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 class='main-header'>The Blackwood Mansion</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <h1 class='main-header'>🔍 AI MURDER MYSTERY</h1>
+    <h3 class='sub-header'>The Blackwood Mansion Affair</h3>
+    <p style="text-align: center; color: #444; font-family: 'Courier Prime', monospace; font-size: 12px;">
+        A game of deception, deduction, and dark secrets
+    </p>
+    """, unsafe_allow_html=True)
 
     # Sidebar
     render_suspect_selector()
@@ -321,7 +625,7 @@ def main():
 
     # New game button in sidebar
     st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 New Game", use_container_width=True):
+    if st.sidebar.button("🔄 NEW CASE", use_container_width=True):
         reset_game()
         st.rerun()
 
@@ -333,6 +637,7 @@ def main():
         render_game_result()
     else:
         render_chat_interface()
+        render_notes_section()
         render_accusation_form()
 
 
