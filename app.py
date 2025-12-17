@@ -6,6 +6,10 @@ Streamlit Web UI with Dark Noir Theme
 import streamlit as st
 import os
 from dotenv import load_dotenv
+import time
+import re
+import string
+import random
 
 # Load environment variables from .env file
 load_dotenv()
@@ -156,6 +160,16 @@ st.markdown("""
         border: 1px solid #444;
         font-family: 'Courier Prime', monospace;
         transition: all 0.3s ease;
+        /* Make suggestion buttons uniform size and allow text wrap */
+        min-height: 60px !important;
+        height: 60px !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 10px !important;
     }
 
     .stButton > button:hover {
@@ -204,23 +218,27 @@ st.markdown("""
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
     }
 
-    /* Ensure the chat input area matches the noir theme */
+    /* Ensure the chat input outer container is solid black to match request */
     .stChatInput, .stChatInput > div {
-        background: transparent !important;
-    }
-
-    /* Chat input outer container: ensure parent panel is dark (covers white container issue) */
-    [data-testid="stChatInput"],
-    [data-testid="stChatInput"] > div,
-    .stChatInput, .stChatInput > div,
-    .stChatInput .css-1v3fvcr,
-    .stChatInput .css-1d391kg,
-    .stChatInput .css-18e3th9 {
-        background: linear-gradient(180deg, #0d0d0d, #141414) !important;
+        background: #000000 !important;
         color: #c0c0c0 !important;
         border-radius: 10px !important;
         padding: 6px !important;
-        border: 1px solid #222 !important;
+        border: 1px solid #0b0b0b !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
+    }
+
+    /* Chat input outer container (alternate selectors for Streamlit variants) */
+    [data-testid="stChatInput"],
+    [data-testid="stChatInput"] > div,
+    .stChatInput .css-1v3fvcr,
+    .stChatInput .css-1d391kg,
+    .stChatInput .css-18e3th9 {
+        background: #000000 !important;
+        color: #c0c0c0 !important;
+        border-radius: 10px !important;
+        padding: 6px !important;
+        border: 1px solid #0b0b0b !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
     }
 
@@ -370,9 +388,9 @@ def run_ai_agent_interrogation():
         "What was your relationship with the victim?",
         "Did you have any conflicts or disagreements with the victim?"
     ]
-    
+
     state = st.session_state.game.state
-    
+
     # Display header
     st.markdown(f"""
     <div style="background: linear-gradient(90deg, transparent, #1a1a1a, transparent); padding: 10px; text-align: center;">
@@ -386,7 +404,32 @@ def run_ai_agent_interrogation():
     </div>
     """, unsafe_allow_html=True)
     
-    total_questions = 3 * 3  # 3 questions per 3 suspects
+    # Determine how many turns remain and use that as the interrogation budget
+    remaining_turns = max(0, state.max_turns - state.total_turns)
+    if remaining_turns == 0:
+        st.warning("No turns remaining for the AI agent to interrogate.")
+        st.session_state.ai_agent_active = False
+        return
+    # Helper: normalize text to a set of words for similarity checks
+    def normalize_to_set(text):
+        if not text:
+            return set()
+        txt = text.lower()
+        txt = txt.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation)))
+        words = [w.strip() for w in txt.split() if w.strip()]
+        stop = {"the","a","an","at","in","on","to","of","and","is","was","were","i","you","he","she","it","they","we","my","your","his","her","their","that","this"}
+        return set([w for w in words if w not in stop])
+
+    def jaccard_similarity(a, b):
+        if not a and not b:
+            return 1.0
+        if not a or not b:
+            return 0.0
+        inter = len(a & b)
+        union = len(a | b)
+        return inter / union if union > 0 else 0.0
+
+    total_questions = remaining_turns
     questions_asked = 0
     
     # Progress and status containers
@@ -394,21 +437,88 @@ def run_ai_agent_interrogation():
     status_text = st.empty()
     questions_container = st.container()
     
+    # Track questions already asked per suspect (store normalized word-sets)
+    asked_by_suspect = {}
+    for sid in ["s1", "s2", "s3"]:
+        asked_sets = []
+        for m in st.session_state.messages.get(sid, []):
+            if m.get("role") == "user" and isinstance(m.get("content"), str):
+                s = normalize_to_set(m["content"])
+                if s:
+                    asked_sets.append(s)
+        asked_by_suspect[sid] = asked_sets
+
+    # Global set of asked question sets to avoid asking the same question across different suspects
+    global_asked_sets = []
+    for sets in asked_by_suspect.values():
+        global_asked_sets.extend(sets)
+
     # Interrogate each suspect
     for suspect_id in ["s1", "s2", "s3"]:
         st.session_state.game.switch_suspect(suspect_id)
         current_suspect = SUSPECTS[suspect_id]
-        
-        for question in agent_questions[:3]:  # Ask 3 key questions per suspect
+
+        questions_per_suspect = 0
+        # Choose 3 or 4 questions for this suspect (user requested 3-4)
+        max_questions_per_suspect = random.choice([3, 4])
+
+        # Build keywords from other suspects' assistant responses to tailor questions
+        other_keywords = set()
+        for other_id in ["s1", "s2", "s3"]:
+            if other_id == suspect_id:
+                continue
+            for m in st.session_state.messages.get(other_id, []):
+                if m.get("role") == "assistant" and isinstance(m.get("content"), str):
+                    ks = normalize_to_set(m["content"])
+                    other_keywords.update(ks)
+
+        # Create simple tailored questions based on keywords mentioned by other suspects
+        tailored_questions = []
+        for kw in list(other_keywords):
+            if len(tailored_questions) >= 2:
+                break
+            if len(kw) < 3:
+                continue
+            tailored_questions.append(f"Do you know anything about {kw}?")
+
+        # Candidate pool: tailored first (to encourage varying questions), then generic agent questions
+        candidates = tailored_questions + agent_questions
+
+        for question in candidates:
             if state.total_turns >= state.max_turns:
                 break
-            
+
+            # Stop if we've asked enough questions for this suspect
+            if questions_per_suspect >= max_questions_per_suspect:
+                break
+
+            # Prepare question set and check against both per-suspect and global asked sets
+            q_set = normalize_to_set(question)
+
+            # Skip if already asked to this suspect
+            already = False
+            for prev in asked_by_suspect.get(suspect_id, []):
+                if jaccard_similarity(q_set, prev) >= 0.7:
+                    already = True
+                    break
+            if already:
+                continue
+
+            # Skip if a very similar question has been asked to any suspect
+            duplicate_elsewhere = False
+            for prev in global_asked_sets:
+                if jaccard_similarity(q_set, prev) >= 0.7:
+                    duplicate_elsewhere = True
+                    break
+            if duplicate_elsewhere:
+                continue
+
             # Update status
             status_text.markdown(f"**🤖 Interrogating:** {current_suspect.name} - Question {questions_asked + 1}/{total_questions}")
-            
+
             # Ask question
             response = st.session_state.game.interrogate(question)
-            
+
             st.session_state.messages[suspect_id].append({
                 "role": "user",
                 "content": question
@@ -417,7 +527,13 @@ def run_ai_agent_interrogation():
                 "role": "assistant",
                 "content": response
             })
-            
+
+            # Record asked question to avoid repeats (store normalized set)
+            asked_by_suspect.setdefault(suspect_id, []).append(q_set)
+            global_asked_sets.append(q_set)
+
+            questions_per_suspect += 1
+
             # Display the exchange in real-time
             with questions_container:
                 st.markdown(f"**🕵️ Agent → {current_suspect.name}:**")
@@ -425,10 +541,76 @@ def run_ai_agent_interrogation():
                 st.markdown(f"**🎭 {current_suspect.name}:**")
                 st.markdown(f"*{response}*")
                 st.markdown("---")
-            
+
             questions_asked += 1
-            progress_bar.progress(min(questions_asked / total_questions, 1.0))
-            
+            progress_bar.progress(min(questions_asked / max(1, total_questions), 1.0))
+
+            # Small pause so the user can follow the transcript updates
+            time.sleep(0.5)
+
+            # Adaptive follow-ups based on the suspect's response (avoid duplicates globally)
+            def select_followups(text):
+                t = (text or "").lower()
+                followups = []
+                if any(k in t for k in ["alibi", "was at", "at the time", "where i was", "i was"]):
+                    followups.append("Can you provide more details about your alibi? Who can confirm it?")
+                if any(k in t for k in ["alone", "no one", "by myself"]):
+                    followups.append("Who could corroborate that you were alone?")
+                if any(k in t for k in ["see", "saw", "witness", "sighting"]):
+                    followups.append("Who did you see and can you describe them?")
+                if any(k in t for k in ["fight", "argument", "argue", "disagreement", "quarrel"]):
+                    followups.append("What was the disagreement about and when did it happen?")
+                if any(k in t for k in ["money", "debt", "inheritance", "owe"]):
+                    followups.append("Did you have any financial disputes with the victim? Please explain.")
+                if any(k in t for k in ["lover", "affair", "relationship", "ex", "married"]):
+                    followups.append("Can you describe your relationship with the victim in more detail?")
+                # Generic expansion if nothing specific detected
+                if not followups:
+                    followups.append("Can you expand on that?")
+                # Limit to at most 2 follow-ups
+                return followups[:2]
+
+            followups = select_followups(response)
+            for fup in followups:
+                if state.total_turns >= state.max_turns:
+                    break
+
+                # Skip follow-up if already asked to this suspect or elsewhere
+                fup_set = normalize_to_set(fup)
+                skip_fup = False
+                for prev in asked_by_suspect.get(suspect_id, []):
+                    if jaccard_similarity(fup_set, prev) >= 0.7:
+                        skip_fup = True
+                        break
+                if skip_fup:
+                    continue
+                for prev in global_asked_sets:
+                    if jaccard_similarity(fup_set, prev) >= 0.7:
+                        skip_fup = True
+                        break
+                if skip_fup:
+                    continue
+
+                # Ask follow-up
+                f_response = st.session_state.game.interrogate(fup)
+                st.session_state.messages[suspect_id].append({"role": "user", "content": fup})
+                st.session_state.messages[suspect_id].append({"role": "assistant", "content": f_response})
+
+                # Record asked follow-up
+                asked_by_suspect.setdefault(suspect_id, []).append(fup_set)
+                global_asked_sets.append(fup_set)
+
+                with questions_container:
+                    st.markdown(f"**🕵️ Agent → {current_suspect.name}:**")
+                    st.markdown(f"*{fup}*")
+                    st.markdown(f"**🎭 {current_suspect.name}:**")
+                    st.markdown(f"*{f_response}*")
+                    st.markdown("---")
+
+                questions_asked += 1
+                progress_bar.progress(min(questions_asked / max(1, total_questions), 1.0))
+                time.sleep(0.4)
+
         if state.total_turns >= state.max_turns:
             break
     
@@ -571,7 +753,7 @@ def render_chat_interface():
                 for j, prompt in enumerate(row):
                     # key must be unique per suspect to avoid collisions across suspects
                     btn_key = f"suggest_{st.session_state.current_suspect}_{i+j}"
-                    if cols[j].button(prompt, key=btn_key):
+                    if cols[j].button(prompt, key=btn_key, use_container_width=True):
                         # Add user message
                         st.session_state.messages[st.session_state.current_suspect].append({
                             "role": "user",
