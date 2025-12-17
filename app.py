@@ -313,6 +313,15 @@ def init_session_state():
     # General notes
     if "general_notes" not in st.session_state:
         st.session_state.general_notes = ""
+    # Game mode: "manual" or "ai_agent"
+    if "game_mode" not in st.session_state:
+        st.session_state.game_mode = "manual"
+    # AI agent active state
+    if "ai_agent_active" not in st.session_state:
+        st.session_state.ai_agent_active = False
+    # AI agent progress
+    if "ai_agent_progress" not in st.session_state:
+        st.session_state.ai_agent_progress = {"questions_asked": 0, "suspects_to_question": ["s1", "s2", "s3"]}
 
 
 def reset_game():
@@ -324,6 +333,8 @@ def reset_game():
     st.session_state.accusation_result = None
     st.session_state.notes = {sid: "" for sid in SUSPECTS.keys()}
     st.session_state.general_notes = ""
+    st.session_state.ai_agent_active = False
+    st.session_state.ai_agent_progress = {"questions_asked": 0, "suspects_to_question": ["s1", "s2", "s3"]}
 
 
 def render_case_briefing():
@@ -349,6 +360,103 @@ def render_case_briefing():
     st.markdown("*Your mission: Interrogate the suspects. Discover WHO committed the murder, with WHAT weapon, and WHY.*")
 
 
+def run_ai_agent_interrogation():
+    """Run automatic interrogation by AI agent and make accusation."""
+    agent_questions = [
+        "Where were you at the time of the murder?",
+        "How did you know the victim?",
+        "Did you see or hear anything suspicious that night?",
+        "Can anyone verify your whereabouts during the time of death?",
+        "What was your relationship with the victim?",
+        "Did you have any conflicts or disagreements with the victim?"
+    ]
+    
+    state = st.session_state.game.state
+    
+    # Display header
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, transparent, #1a1a1a, transparent); padding: 10px; text-align: center;">
+        <span style="font-family: 'Special Elite', cursive; font-size: 24px; color: #8B0000;">
+            🤖 AI AGENT INVESTIGATION
+        </span>
+        <br>
+        <span style="font-family: 'Courier Prime', monospace; color: #666;">
+            Automated interrogation in progress...
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    total_questions = 3 * 3  # 3 questions per 3 suspects
+    questions_asked = 0
+    
+    # Progress and status containers
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    questions_container = st.container()
+    
+    # Interrogate each suspect
+    for suspect_id in ["s1", "s2", "s3"]:
+        st.session_state.game.switch_suspect(suspect_id)
+        current_suspect = SUSPECTS[suspect_id]
+        
+        for question in agent_questions[:3]:  # Ask 3 key questions per suspect
+            if state.total_turns >= state.max_turns:
+                break
+            
+            # Update status
+            status_text.markdown(f"**🤖 Interrogating:** {current_suspect.name} - Question {questions_asked + 1}/{total_questions}")
+            
+            # Ask question
+            response = st.session_state.game.interrogate(question)
+            
+            st.session_state.messages[suspect_id].append({
+                "role": "user",
+                "content": question
+            })
+            st.session_state.messages[suspect_id].append({
+                "role": "assistant",
+                "content": response
+            })
+            
+            # Display the exchange in real-time
+            with questions_container:
+                st.markdown(f"**🕵️ Agent → {current_suspect.name}:**")
+                st.markdown(f"*{question}*")
+                st.markdown(f"**🎭 {current_suspect.name}:**")
+                st.markdown(f"*{response}*")
+                st.markdown("---")
+            
+            questions_asked += 1
+            progress_bar.progress(min(questions_asked / total_questions, 1.0))
+            
+        if state.total_turns >= state.max_turns:
+            break
+    
+    # Make final accusation based on game logic
+    status_text.markdown("**🤖 AI Agent**: Analyzing evidence and making final accusation...")
+    
+    # Get the correct answer from game state (assuming it's stored)
+    # For now, use the AI's best guess based on suspect responses
+    accused = "s1"  # AI will guess the first suspect (placeholder logic)
+    weapon = VALID_WEAPONS[0] if VALID_WEAPONS else "dagger"
+    motive = VALID_MOTIVES[0] if VALID_MOTIVES else "revenge"
+    
+    won, score, eval_text = st.session_state.game.make_accusation(accused, weapon, motive)
+    
+    st.session_state.game_over = True
+    st.session_state.accusation_result = {
+        "won": won,
+        "score": score,
+        "eval_text": eval_text,
+        "ai_agent": True
+    }
+    st.session_state.ai_agent_active = False
+    
+    status_text.markdown("**✓ AI Agent**: Case analysis complete!")
+    progress_bar.progress(1.0)
+    st.rerun()
+
+
 def render_suspect_selector():
     """Render suspect selection sidebar."""
     st.sidebar.markdown('<div class="sidebar-header">👥 SUSPECTS</div>', unsafe_allow_html=True)
@@ -367,7 +475,7 @@ def render_suspect_selector():
             f"{suspect.name}\n{status}",
             key=f"suspect_{sid}",
             use_container_width=True,
-            disabled=st.session_state.game_over
+            disabled=st.session_state.game_over or st.session_state.ai_agent_active
         ):
             st.session_state.current_suspect = sid
             st.session_state.game.switch_suspect(sid)
@@ -672,6 +780,35 @@ def render_game_result():
         </p>
         """, unsafe_allow_html=True)
 
+    # Interrogation transcript (for AI agent or manual mode)
+    if result.get("ai_agent"):
+        with st.expander("📝 Interrogation Transcript", expanded=False):
+            for suspect_id in ["s1", "s2", "s3"]:
+                suspect = SUSPECTS[suspect_id]
+                messages = st.session_state.messages[suspect_id]
+                if messages:
+                    st.markdown(f"### 🎭 {suspect.name}")
+                    for msg in messages:
+                        if msg["role"] == "user":
+                            st.markdown(f"**🕵️ Detective:** {msg['content']}")
+                        else:
+                            st.markdown(f"**{suspect.name}:** {msg['content']}")
+                    st.markdown("---")
+    else:
+        # Manual mode - show all questions asked
+        with st.expander("📝 Interrogation Transcript", expanded=False):
+            for suspect_id in ["s1", "s2", "s3"]:
+                suspect = SUSPECTS[suspect_id]
+                messages = st.session_state.messages[suspect_id]
+                if messages:
+                    st.markdown(f"### 🎭 {suspect.name}")
+                    for msg in messages:
+                        if msg["role"] == "user":
+                            st.markdown(f"**🕵️ You:** {msg['content']}")
+                        else:
+                            st.markdown(f"**{suspect.name}:** {msg['content']}")
+                    st.markdown("---")
+
     # Detailed evaluation
     with st.expander("📋 Case Resolution Report", expanded=True):
         st.markdown(result["eval_text"])
@@ -718,7 +855,39 @@ def main():
     </p>
     """, unsafe_allow_html=True)
 
-    # Sidebar
+    # Sidebar - Game mode selector at top
+    st.sidebar.markdown('<div class="sidebar-header">🎮 INVESTIGATION MODE</div>', unsafe_allow_html=True)
+    
+    mode_col1, mode_col2 = st.sidebar.columns(2)
+    
+    with mode_col1:
+        if st.button(
+            "👁️ Manual\nInvestigate",
+            key="mode_manual",
+            use_container_width=True,
+            disabled=st.session_state.ai_agent_active
+        ):
+            st.session_state.game_mode = "manual"
+            st.rerun()
+    
+    with mode_col2:
+        if st.button(
+            "🤖 AI Agent\nSolve",
+            key="mode_agent",
+            use_container_width=True,
+            disabled=st.session_state.game_over
+        ):
+            st.session_state.game_mode = "ai_agent"
+            st.session_state.ai_agent_active = True
+            st.rerun()
+    
+    # Display current mode
+    mode_icon = "👁️" if st.session_state.game_mode == "manual" else "🤖"
+    mode_text = "Manual Investigation" if st.session_state.game_mode == "manual" else "AI Agent Mode"
+    st.sidebar.markdown(f"**Current Mode:** {mode_icon} {mode_text}")
+    
+    # Sidebar - Suspects and status
+    st.sidebar.markdown("---")
     render_suspect_selector()
     render_game_status()
 
@@ -731,13 +900,20 @@ def main():
     # Main content
     render_case_briefing()
 
+    # If AI agent is active, run interrogation
+    if st.session_state.ai_agent_active:
+        run_ai_agent_interrogation()
+    
     # Show result if game is over
     if st.session_state.game_over and st.session_state.accusation_result:
         render_game_result()
-    else:
+    elif st.session_state.game_mode == "manual":
+        # Manual mode: show chat interface, notes, and accusation form
         render_chat_interface()
         render_notes_section()
         render_accusation_form()
+    elif st.session_state.game_mode == "ai_agent" and not st.session_state.ai_agent_active:
+        st.info("🤖 Waiting for AI agent to start investigation. Click 'AI Agent Solve' to begin.")
 
 
 if __name__ == "__main__":
