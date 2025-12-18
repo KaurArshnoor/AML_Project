@@ -17,7 +17,8 @@ from agno.models.groq import Groq
 # CONFIGURATION
 # ============================================================
 
-GROQ_MODEL_ID = "llama-3.3-70b-versatile"
+GROQ_MODEL_ID = "llama-3.3-70b-versatile" 
+EVALUATOR_MODEL_ID = "llama-3.1-8b-instant"
 
 
 # ============================================================
