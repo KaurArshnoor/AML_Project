@@ -341,7 +341,7 @@ DETECTIVE RATING: [Novice/Amateur/Competent/Skilled/Master]
     return Agent(
         name="Accusation Evaluation Agent",
         role="Judge player accusations and provide case resolution.",
-        model=Groq(id=GROQ_MODEL_ID),
+        model=Groq(id=EVALUATOR_MODEL_ID),
         instructions=[instructions],
         markdown=True,
     )
