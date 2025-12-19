@@ -1,4 +1,3 @@
-# AML_Project
 # 🕵️ AI Murder Mystery – Multi-Agent LLM Investigation System
 
 An interactive murder mystery game built using a **role-specialized multi-agent architecture**, where Large Language Models simulate suspects, enforce narrative constraints, and evaluate final accusations.
