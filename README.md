@@ -22,6 +22,8 @@ The system demonstrates how **multiple LLM agents with different responsibilitie
 
 ## 🧩 System Overview
 
+
+
 The system is controlled by a central **Game Engine**, which manages state and routes interactions between agents.
 
 ### Player Types
