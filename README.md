@@ -1,7 +1,7 @@
 # 🕵️ AI Murder Mystery – Multi-Agent LLM Investigation System
 
 <p align="center">
-  <img src="images/demonstration.png" width="650"/>
+  <img src="images/Demonstration.png" width="650"/>
 </p>
 
 An interactive murder mystery game built using a **role-specialized multi-agent architecture**, where Large Language Models simulate suspects, enforce narrative constraints, and evaluate final accusations.
